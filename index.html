@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mesa de Sons — Mestre</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap');
+
+  :root {
+    --bg: #16110c;
+    --bg-glow: #2a2118;
+    --panel: #1f1810;
+    --card: #241c14;
+    --card-hover: #2b2118;
+    --border: #3a2e20;
+    --text: #e9dfc7;
+    --muted: #8a8272;
+    --accent: #a97d4c;
+    --torch: #d9a13c;
+    --torch-dim: rgba(217, 161, 60, 0.14);
+    --danger: #9c2b2b;
+    --radius: 10px;
+  }
+
+  * { box-sizing: border-box; }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse at top, var(--bg-glow) 0%, transparent 55%),
+      radial-gradient(ellipse at 10% 100%, rgba(217,161,60,0.05) 0%, transparent 45%),
+      radial-gradient(ellipse at 90% 100%, rgba(217,161,60,0.04) 0%, transparent 45%),
+      var(--bg);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: 'Crimson Text', Georgia, serif;
+    padding: 22px 16px 70px;
+  }
+  /* grão de pergaminho sutil por cima de tudo */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.5;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='0.35'/></svg>");
+  }
+
+  .app { max-width: 980px; margin: 0 auto; position: relative; z-index: 1; }
+
+  h1, h2, .cinzel {
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.03em;
+  }
+
+  .topbar { margin-bottom: 22px; text-align: center; }
+  .topbar h1 {
+    font-size: 28px;
+    font-weight: 900;
+    margin: 0 0 6px;
+    color: var(--torch);
+    text-shadow: 0 0 18px rgba(217,161,60,0.35), 0 1px 0 rgba(0,0,0,0.6);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .topbar .subtitle { margin: 0; color: var(--muted); font-size: 14px; font-style: italic; }
+  .topbar .flourish {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    margin: 10px auto 0; max-width: 360px;
+    color: var(--accent); font-size: 12px; letter-spacing: 0.3em;
+  }
+  .topbar .flourish::before, .topbar .flourish::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+  }
+
+  .controls-row {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    margin-bottom: 16px;
+  }
+  .controls-row input[type="text"],
+  .controls-row select {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    box-shadow: inset 0 0 0 1px rgba(217,161,60,0.05);
+    color: var(--text);
+    font-family: 'Crimson Text', serif;
+    font-size: 15px;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    outline: none;
+  }
+  .controls-row input[type="text"]:focus,
+  .controls-row select:focus { border-color: var(--accent); }
+  #search { flex: 1 1 200px; min-width: 140px; }
+  #filter-categoria { flex: 0 0 auto; }
+
+  .btn {
+    font-family: 'Cinzel', serif;
+    font-size: 12.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border: 1px solid var(--border);
+    background: var(--panel);
+    color: var(--text);
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    white-space: nowrap;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), inset 0 -1px 0 rgba(0,0,0,0.3);
+  }
+  .btn:hover { border-color: var(--accent); color: #fff2da; }
+  .btn:focus-visible, input:focus-visible, select:focus-visible, button:focus-visible {
+    outline: 2px solid var(--torch); outline-offset: 2px;
+  }
+  .btn-accent { background: var(--accent); border-color: var(--accent); color: #1a1208; }
+  .btn-accent:hover { background: #bb8f5e; color: #1a1208; }
+  .btn-danger { border-color: var(--danger); color: #e29a9a; }
+  .btn-danger:hover { background: rgba(156,43,43,0.18); }
+  .btn-ghost { background: transparent; }
+
+  /* ---------- add panel ---------- */
+  .add-panel {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px rgba(217,161,60,0.06), 0 6px 18px rgba(0,0,0,0.3);
+    padding: 18px 16px 16px;
+    margin-bottom: 22px;
+  }
+  .add-panel::before, .add-panel::after,
+  .sound-card::before, .sound-card::after {
+    content: "";
+    position: absolute;
+    width: 13px; height: 13px;
+    border: 1px solid var(--accent);
+    opacity: 0.55;
+    pointer-events: none;
+  }
+  .add-panel::before { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+  .add-panel::after { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+  .add-panel.hidden { display: none; }
+  .add-panel h2 {
+    font-size: 14px; margin: 0 0 12px; color: var(--torch);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .add-panel h2::before { content: "🕯️"; font-size: 12px; }
+  .add-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  @media (max-width: 520px) { .add-grid { grid-template-columns: 1fr; } }
+  .field-label {
+    display: block;
+    font-family: 'Cinzel', serif;
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .field-full { grid-column: 1 / -1; }
+  .add-grid input[type="text"], .add-grid select, .add-grid input[type="file"] {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'Crimson Text', serif;
+    font-size: 15px;
+    padding: 9px 10px;
+    border-radius: 6px;
+    outline: none;
+  }
+  .add-grid input:focus, .add-grid select:focus { border-color: var(--accent); }
+  .checkbox-row { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); }
+  .checkbox-row input { width: 16px; height: 16px; accent-color: var(--torch); }
+  .add-actions { display: flex; gap: 8px; justify-content: flex-end; }
+  .add-error { color: #e29a9a; font-size: 13.5px; margin: -4px 0 10px; }
+
+  /* ---------- pinned shelf (signature element) ---------- */
+  .shelf {
+    position: relative;
+    margin-bottom: 26px;
+    padding: 16px 14px 14px;
+    border-radius: 14px;
+    background:
+      radial-gradient(120% 140% at 15% 0%, var(--torch-dim), transparent 60%),
+      radial-gradient(120% 140% at 85% 0%, var(--torch-dim), transparent 60%),
+      linear-gradient(180deg, #241a10 0%, #1a140d 100%);
+    border: 1px solid #4a3b22;
+    box-shadow: 0 0 0 1px rgba(217,161,60,0.05) inset, 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .shelf::before {
+    content: "";
+    position: absolute; inset: 0;
+    border-radius: 14px;
+    box-shadow: 0 0 40px 6px rgba(217,161,60,0.06) inset;
+    animation: flicker 5s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes flicker {
+    0%, 100% { opacity: 0.7; }
+    45% { opacity: 1; }
+    52% { opacity: 0.55; }
+    78% { opacity: 0.9; }
+  }
+  .shelf h2 {
+    font-size: 13.5px;
+    margin: 0 0 10px;
+    color: var(--torch);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .shelf h2::before { content: "🔥"; font-size: 14px; }
+  .shelf h2::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--accent), transparent);
+  }
+  .pinned-row {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent) transparent;
+  }
+  .pinned-row::-webkit-scrollbar { height: 6px; }
+  .pinned-row::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 3px; }
+  .pinned-row::-webkit-scrollbar-track { background: transparent; }
+  .pinned-empty {
+    color: var(--muted); font-size: 14px; font-style: italic; padding: 6px 2px;
+  }
+  .pinned-card {
+    flex: 0 0 168px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px rgba(217,161,60,0.05);
+    padding: 10px;
+  }
+  .pinned-card.tocando { border-color: var(--torch); box-shadow: 0 0 0 1px var(--torch), 0 0 12px rgba(217,161,60,0.18); }
+  .pinned-card .p-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; margin-bottom: 6px; }
+  .pinned-card .p-name { font-size: 14px; line-height: 1.25; }
+  .pinned-card .unpin { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 0; }
+  .pinned-card .unpin:hover { color: var(--danger); }
+  .pinned-card .p-controls { display: flex; align-items: center; gap: 6px; }
+
+  /* ---------- library grid ---------- */
+  .library h2 {
+    font-size: 13.5px; color: var(--muted); margin: 0 0 10px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .library h2::before { content: "📜"; font-size: 13px; }
+  .library h2::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+  .empty-state {
+    color: var(--muted); font-size: 15px; padding: 30px 10px; text-align: center;
+    border: 1px dashed var(--border); border-radius: var(--radius);
+  }
+
+  .sound-card {
+    position: relative;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px rgba(217,161,60,0.04);
+    overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .sound-card::before { top: 6px; left: 6px; border-width: 1px 0 0 1px; }
+  .sound-card::after { top: 6px; right: 6px; border-width: 1px 1px 0 0; }
+  .sound-card.tocando { border-color: var(--torch); box-shadow: 0 0 0 1px var(--torch), 0 0 14px rgba(217,161,60,0.15); }
+  .swatch {
+    position: relative;
+    height: 64px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px;
+  }
+  .swatch::after {
+    content: "";
+    width: 42px; height: 42px;
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid rgba(217,161,60,0.3);
+  }
+  .swatch span { position: relative; z-index: 1; }
+  .card-body { padding: 10px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; }
+  .card-name { font-size: 16px; line-height: 1.25; word-break: break-word; }
+  .card-cat {
+    display: inline-block; font-family: 'Cinzel', serif; font-size: 9.5px;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+    margin-top: 2px;
+  }
+  .icon-btn {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    padding: 2px; line-height: 1; font-size: 15px; flex-shrink: 0;
+  }
+  .icon-btn:hover { color: var(--text); }
+  .icon-btn.active { color: var(--torch); }
+  .icon-btn.pin-btn.active { color: var(--torch); }
+  .icon-btn.loop-btn {
+    border-radius: 50%;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+  }
+  .icon-btn.loop-btn.active {
+    color: #1a1208;
+    background: var(--torch);
+    box-shadow: 0 0 0 3px rgba(217,161,60,0.22), 0 0 10px rgba(217,161,60,0.35);
+  }
+
+  /* ---------- library grouped-by-category list ---------- */
+  .category-group { margin-bottom: 20px; }
+  .category-title {
+    font-size: 12.5px; margin: 0 0 8px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .category-title .category-count { color: var(--muted); font-family: 'Crimson Text', serif; text-transform: none; letter-spacing: 0; font-size: 12.5px; }
+  .category-title::after {
+    content: ""; flex: 1; height: 1px;
+    background: linear-gradient(to right, var(--border), transparent);
+  }
+  .sound-list { display: flex; flex-direction: column; gap: 8px; }
+  .sound-row {
+    position: relative;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px rgba(217,161,60,0.04);
+    padding: 8px 12px;
+  }
+  .sound-row.tocando { border-color: var(--torch); box-shadow: 0 0 0 1px var(--torch), 0 0 14px rgba(217,161,60,0.15); }
+  .row-swatch {
+    width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 15px;
+    border: 1px solid rgba(217,161,60,0.25);
+  }
+  .row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .row-name-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .row-name { font-size: 15.5px; line-height: 1.2; }
+  .row-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .row-controls .row-actions { flex: 1 1 140px; min-width: 120px; }
+  .row-controls .sub-row { flex: 1 1 160px; }
+  .row-end-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  @media (max-width: 560px) {
+    .sound-row { flex-wrap: wrap; }
+    .row-main { flex-basis: 100%; order: 2; }
+    .row-end-actions { order: 3; margin-left: 44px; }
+  }
+
+  .row-actions { display: flex; align-items: center; gap: 10px; }
+  .play-btn {
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--accent); border: none; color: #1a1208;
+    font-size: 14px; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .play-btn:hover { background: #bb8f5e; }
+  .play-btn.tocando { background: var(--torch); }
+
+  .seek {
+    flex: 1;
+    -webkit-appearance: none; appearance: none;
+    height: 4px; border-radius: 2px; background: var(--border);
+    outline: none; cursor: pointer;
+  }
+  .seek::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--torch); cursor: pointer; margin-top: -4px;
+  }
+  .seek::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: var(--torch); border: none; }
+  .seek::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: var(--border); }
+
+  .sub-row { display: flex; align-items: center; gap: 8px; }
+  .vol {
+    -webkit-appearance: none; appearance: none;
+    width: 70px; height: 3px; border-radius: 2px; background: var(--border); cursor: pointer;
+  }
+  .vol::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 10px; height: 10px; border-radius: 50%;
+    background: var(--muted); cursor: pointer; margin-top: -3.5px;
+  }
+  .card-footer-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+  .edit-row { display: flex; flex-direction: column; gap: 6px; }
+  .edit-row input, .edit-row select {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    font-family: 'Crimson Text', serif; font-size: 14px; padding: 6px 8px; border-radius: 6px;
+  }
+  .edit-actions { display: flex; gap: 6px; justify-content: flex-end; }
+
+  .page-seal {
+    text-align: center;
+    margin-top: 34px;
+    color: var(--accent);
+    opacity: 0.5;
+    font-size: 20px;
+  }
+  .page-seal::before, .page-seal::after {
+    content: "";
+    display: inline-block;
+    width: 60px; height: 1px;
+    vertical-align: middle;
+    margin: 0 12px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<!--
+  Mesa de Sons — pronta pra publicar em qualquer hospedagem estática (Netlify, Vercel, GitHub Pages etc).
+  Este arquivo usa dois serviços gratuitos, nenhum deles pede cartão de crédito:
+  - Firebase Realtime Database: guarda a lista de sons/categorias/fixados e sincroniza em tempo real
+    entre qualquer aparelho que abra esta mesma página.
+  - Supabase Storage: guarda os arquivos de áudio em si (arquivo binário de verdade — toca em
+    streaming, sem esperar o arquivo inteiro carregar, e sobe mais rápido também).
+
+  IMPORTANTE — regras de segurança:
+  Este app não tem login (nem Firebase Auth, nem Supabase Auth), então, pra funcionar, os dois
+  precisam estar com regras/policies que permitam leitura/escrita sem autenticação.
+
+  No Console do Firebase, em Realtime Database > Regras:
+    {
+      "rules": {
+        ".read": true,
+        ".write": true
+      }
+    }
+
+  No Supabase, bucket "audios": marcado como público, com policies de INSERT e DELETE liberadas
+  pra role "anon" (leitura já funciona sozinha por o bucket ser público).
+
+  Como essas regras liberam acesso pra qualquer pessoa que tenha a URL do app, evite compartilhar o
+  link publicamente se os áudios/lista forem algo que você queira manter só pro seu grupo de jogo.
+-->
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+// ---------------- conexão com o Firebase (lista de sons, em tempo real) ----------------
+const firebaseConfig = {
+  apiKey: "AIzaSyBOz3lNezOercyJXCAFsSlvxdnC2AF0K6U",
+  authDomain: "sons-rpg.firebaseapp.com",
+  databaseURL: "https://sons-rpg-default-rtdb.firebaseio.com",
+  projectId: "sons-rpg",
+  storageBucket: "sons-rpg.firebasestorage.app",
+  messagingSenderId: "485785889061",
+  appId: "1:485785889061:web:0ae3ed451cd27ce31992cc"
+};
+const firebaseApp = firebase.initializeApp(firebaseConfig);
+const dbRealtime = firebase.database(firebaseApp);
+const CAMINHO_DADOS = "mesaDeSons"; // "sons-index" e "sons-pinned" (texto/JSON) ficam no Realtime Database
+
+// ---------------- conexão com o Supabase (arquivos de áudio) ----------------
+const supabaseUrl = "https://cngdxtsbanhsiwbvcpns.supabase.co";
+const supabaseKey = "sb_publishable_wG6NPw8csDmPIg1m444H6w_-2TjWSdw";
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+const BUCKET_AUDIOS = "audios";
+
+// ---------------- armazenamento na nuvem (Realtime Database + Supabase Storage) ----------------
+// Mantém a mesma "forma" de uso (get/set/delete/watch) que o resto do código já espera, então
+// nenhuma outra parte do arquivo precisou mudar. Chaves "audio:<id>" vão pro Supabase Storage
+// (arquivo binário, toca em streaming); as demais chaves ("sons-index", "sons-pinned") vão pro
+// Firebase Realtime Database (texto/JSON, sincroniza em tempo real).
+window.storage = (function () {
+  function refDado(key) { return dbRealtime.ref(CAMINHO_DADOS + "/" + key); }
+  function urlPublicaAudio(id) {
+    const { data } = supabaseClient.storage.from(BUCKET_AUDIOS).getPublicUrl(id);
+    return data && data.publicUrl ? data.publicUrl : null;
+  }
+
+  return {
+    async get(key) {
+      if (key.startsWith("audio:")) {
+        const id = key.slice(6);
+        const url = urlPublicaAudio(id);
+        return url ? { key, value: url, shared: false } : null;
+      }
+      const snap = await refDado(key).once("value");
+      const valor = snap.val();
+      if (valor === null || valor === undefined) return null;
+      return { key, value: valor, shared: false };
+    },
+    async set(key, value) {
+      if (key.startsWith("audio:")) {
+        // "value" aqui é o File/Blob selecionado no formulário (não precisa mais converter pra
+        // base64 — o Supabase aceita o arquivo binário direto, o que deixa o upload bem mais rápido).
+        const id = key.slice(6);
+        const { error } = await supabaseClient.storage.from(BUCKET_AUDIOS).upload(id, value, {
+          upsert: true,
+          contentType: value.type || "audio/mpeg"
+        });
+        if (error) throw error;
+        return { key, value: urlPublicaAudio(id), shared: false };
+      }
+      await refDado(key).set(value);
+      return { key, value, shared: false };
+    },
+    async delete(key) {
+      if (key.startsWith("audio:")) {
+        const id = key.slice(6);
+        try { await supabaseClient.storage.from(BUCKET_AUDIOS).remove([id]); } catch (e) {}
+        return { key, deleted: true, shared: false };
+      }
+      await refDado(key).remove();
+      return { key, deleted: true, shared: false };
+    },
+    async list(prefix) {
+      // Não é usado pelo restante do app hoje, mas fica disponível pra uso futuro.
+      return { keys: [], prefix, shared: false };
+    },
+    // Escuta em tempo real: chama "callback" toda vez que o valor da chave mudar no
+    // Realtime Database (inclusive quando é outro aparelho que muda). Só funciona pras
+    // chaves de texto ("sons-index", "sons-pinned"), não pras chaves de áudio.
+    watch(key, callback) {
+      const r = refDado(key);
+      r.on("value", snap => {
+        const valor = snap.val();
+        callback(valor === null || valor === undefined ? null : { key, value: valor, shared: false });
+      }, err => { console.error("Erro ao escutar '" + key + "':", err); });
+      return () => r.off("value");
+    }
+  };
+})();
+</script>
+
+<script>
+(function () {
+  "use strict";
+
+  const CATEGORIA_INFO = {
+    "Ambiente": { emoji: "🌲", cor: "#4c7a4c" },
+    "Combate": { emoji: "⚔️", cor: "#9c2b2b" },
+    "Cidade & Social": { emoji: "🏘️", cor: "#3d6a94" },
+    "Perigo & Alerta": { emoji: "🚨", cor: "#c9622b" },
+    "Especial": { emoji: "✨", cor: "#8a5fc9" },
+    "Outros": { emoji: "🎵", cor: "#6f6455" }
+  };
+  const CATEGORIAS_PADRAO = Object.keys(CATEGORIA_INFO);
+
+  function uid() { return Math.random().toString(36).slice(2, 10); }
+  function catInfo(nome) { return CATEGORIA_INFO[nome] || { emoji: "🎵", cor: "#6f6455" }; }
+  function fmtTime(s) {
+    if (!isFinite(s) || s < 0) return "0:00";
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return m + ":" + String(sec).padStart(2, "0");
+  }
+  function escapeHtml(s) {
+    return String(s || "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+
+  // ---------------- storage ----------------
+  async function carregarIndex() {
+    try {
+      const r = await window.storage.get("sons-index", false);
+      return r && r.value ? JSON.parse(r.value) : [];
+    } catch (e) { return []; }
+  }
+  async function salvarIndex(lista) {
+    await window.storage.set("sons-index", JSON.stringify(lista), false);
+  }
+  async function carregarPinned() {
+    try {
+      const r = await window.storage.get("sons-pinned", false);
+      return r && r.value ? JSON.parse(r.value) : [];
+    } catch (e) { return []; }
+  }
+  async function salvarPinned(lista) {
+    await window.storage.set("sons-pinned", JSON.stringify(lista), false);
+  }
+  async function carregarAudio(id) {
+    const r = await window.storage.get("audio:" + id, false);
+    return r && r.value ? r.value : null;
+  }
+
+  // ---------------- state ----------------
+  window.addEventListener("unhandledrejection", e => {
+    console.error("Mesa de Sons: erro não tratado:", e.reason);
+  });
+  const state = {
+    sons: [],
+    pinned: [],
+    filtroTexto: "",
+    filtroCategoria: "todos",
+    addAberto: false,
+    addErro: "",
+    novaCategoriaModo: false,
+    editandoId: null,
+    carregando: true
+  };
+  // player[id] = { audio: HTMLAudioElement|null, tocando: bool, loop: bool, volume: number, carregandoAudio: bool }
+  const player = {};
+
+  function getP(id) {
+    if (!player[id]) player[id] = { audio: null, tocando: false, loop: false, volume: 1, carregandoAudio: false };
+    return player[id];
+  }
+
+  async function togglePlay(id) {
+    const p = getP(id);
+    if (p.tocando) {
+      if (p.audio) p.audio.pause();
+      p.tocando = false;
+      render();
+      return;
+    }
+    if (!p.audio) {
+      p.carregandoAudio = true;
+      render();
+      const dataUrl = await carregarAudio(id);
+      p.carregandoAudio = false;
+      if (!dataUrl) {
+        state.addErro = "";
+        alert("Não consegui carregar o áudio desse som. Ele pode ter sido perdido ao salvar.");
+        render();
+        return;
+      }
+      const audio = new Audio(dataUrl);
+      audio.loop = p.loop;
+      audio.volume = p.volume;
+      audio.addEventListener("ended", () => { p.tocando = false; render(); });
+      audio.addEventListener("timeupdate", () => { renderProgressOnly(id); });
+      p.audio = audio;
+    }
+    p.audio.currentTime = p.audio.currentTime; // no-op, keeps position on toggle
+    p.audio.play();
+    p.tocando = true;
+    render();
+  }
+
+  function silenciarTudo() {
+    Object.keys(player).forEach(id => {
+      const p = player[id];
+      if (p.audio && p.tocando) { p.audio.pause(); p.tocando = false; }
+    });
+    render();
+  }
+
+  function toggleLoop(id) {
+    const p = getP(id);
+    p.loop = !p.loop;
+    if (p.audio) p.audio.loop = p.loop;
+    render();
+  }
+
+  function setVolume(id, v) {
+    const p = getP(id);
+    p.volume = v;
+    if (p.audio) p.audio.volume = v;
+  }
+
+  function seek(id, ratio) {
+    const p = getP(id);
+    if (p.audio && isFinite(p.audio.duration)) {
+      p.audio.currentTime = ratio * p.audio.duration;
+    }
+  }
+
+  async function togglePin(id) {
+    const has = state.pinned.includes(id);
+    state.pinned = has ? state.pinned.filter(x => x !== id) : [...state.pinned, id];
+    await salvarPinned(state.pinned);
+    render();
+  }
+
+  async function removerSom(id) {
+    if (!confirm("Remover este som? O áudio salvo será apagado e isso não pode ser desfeito.")) return;
+    state.sons = state.sons.filter(s => s.id !== id);
+    state.pinned = state.pinned.filter(x => x !== id);
+    await salvarIndex(state.sons);
+    await salvarPinned(state.pinned);
+    try { await window.storage.delete("audio:" + id, false); } catch (e) {}
+    if (player[id] && player[id].audio) { player[id].audio.pause(); }
+    delete player[id];
+    render();
+  }
+
+  function iniciarEdicao(id) { state.editandoId = id; render(); }
+  async function salvarEdicao(id, nome, categoria) {
+    state.sons = state.sons.map(s => s.id === id ? { ...s, nome: nome.trim() || s.nome, categoria } : s);
+    await salvarIndex(state.sons);
+    state.editandoId = null;
+    render();
+  }
+
+  // ---------------- add form ----------------
+  // Espera uma promise até um tempo limite; se estourar o tempo, rejeita com uma mensagem clara
+  // em vez de deixar a tela travada em "Salvando..." pra sempre.
+  function comTempoLimite(promise, ms, mensagemTimeout) {
+    return Promise.race([
+      promise,
+      new Promise((_, rejeita) => setTimeout(() => rejeita(new Error(mensagemTimeout)), ms))
+    ]);
+  }
+
+  async function submeterNovoSom(form) {
+    const nome = form.nome.value.trim();
+    const categoria = state.novaCategoriaModo ? (form.categoriaNova.value.trim() || "Outros") : form.categoria.value;
+    const file = form.arquivo.files[0];
+    const fixar = form.fixar.checked;
+    if (!nome) { state.addErro = "Dá um nome pro som."; render(); return; }
+    if (!file) { state.addErro = "Escolhe um arquivo de áudio."; render(); return; }
+
+    state.addErro = "Salvando...";
+    render();
+
+    const id = uid();
+    try {
+      // Manda o arquivo direto pro Supabase Storage (sem converter pra base64 primeiro —
+      // isso deixa o upload mais rápido e mais leve).
+      await comTempoLimite(
+        window.storage.set("audio:" + id, file, false),
+        25000,
+        "Demorou demais pra salvar o áudio (mais de 25s). Verifique sua conexão com a internet."
+      );
+      const novo = { id, nome, categoria, criadoEm: Date.now() };
+      state.sons = [novo, ...state.sons];
+      await comTempoLimite(salvarIndex(state.sons), 15000, "Demorou demais pra salvar a lista de sons.");
+      if (fixar) {
+        state.pinned = [...state.pinned, id];
+        await comTempoLimite(salvarPinned(state.pinned), 15000, "Demorou demais pra salvar os sons fixados.");
+      }
+      state.addAberto = false;
+      state.addErro = "";
+      state.novaCategoriaModo = false;
+    } catch (e) {
+      console.error("Mesa de Sons: erro ao salvar novo som:", e);
+      state.addErro = e && e.message ? e.message : "Não consegui salvar esse som. Verifique sua conexão com a internet e tente de novo.";
+    }
+    render();
+  }
+
+  // ---------------- derived ----------------
+  function categoriasDisponiveis() {
+    const set = new Set(CATEGORIAS_PADRAO);
+    state.sons.forEach(s => set.add(s.categoria || "Outros"));
+    return Array.from(set);
+  }
+  function sonsFiltrados() {
+    const texto = state.filtroTexto.trim().toLowerCase();
+    return state.sons.filter(s => {
+      if (state.filtroCategoria !== "todos" && (s.categoria || "Outros") !== state.filtroCategoria) return false;
+      if (texto && !s.nome.toLowerCase().includes(texto)) return false;
+      return true;
+    });
+  }
+  // Agrupa os sons filtrados por categoria, mantendo a ordem das categorias padrão
+  // primeiro e categorias extras (criadas pelo usuário) depois, cada uma só aparecendo
+  // se tiver pelo menos um som na lista filtrada.
+  function sonsAgrupadosPorCategoria(filtrados) {
+    const porCategoria = new Map();
+    filtrados.forEach(s => {
+      const cat = s.categoria || "Outros";
+      if (!porCategoria.has(cat)) porCategoria.set(cat, []);
+      porCategoria.get(cat).push(s);
+    });
+    const ordem = categoriasDisponiveis().filter(c => porCategoria.has(c));
+    return ordem.map(cat => ({ categoria: cat, sons: porCategoria.get(cat) }));
+  }
+
+  // ---------------- render ----------------
+  function renderProgressOnly(id) {
+    const p = player[id];
+    if (!p || !p.audio) return;
+    const bar = document.querySelector('.seek[data-id="' + id + '"]');
+    const label = document.querySelector('.time-label[data-id="' + id + '"]');
+    if (bar && isFinite(p.audio.duration) && p.audio.duration > 0) {
+      bar.value = String((p.audio.currentTime / p.audio.duration) * 100);
+    }
+    if (label) label.textContent = fmtTime(p.audio.currentTime) + " / " + fmtTime(p.audio.duration || 0);
+  }
+
+  function cardControlsHtml(s) {
+    const p = getP(s.id);
+    const pct = (p.audio && isFinite(p.audio.duration) && p.audio.duration > 0)
+      ? (p.audio.currentTime / p.audio.duration) * 100 : 0;
+    return `
+      <div class="row-actions">
+        <button class="play-btn ${p.tocando ? "tocando" : ""}" data-action="play" data-id="${s.id}" aria-label="${p.tocando ? "Pausar" : "Tocar"}">
+          ${p.carregandoAudio ? "…" : (p.tocando ? "❚❚" : "▶")}
+        </button>
+        <input type="range" class="seek" data-id="${s.id}" data-action="seek" min="0" max="100" value="${pct}">
+      </div>
+      <div class="sub-row">
+        <button class="icon-btn loop-btn ${p.loop ? "active" : ""}" data-action="loop" data-id="${s.id}" title="${p.loop ? "Repetindo (selecionado)" : "Repetir"}" aria-label="Repetir" aria-pressed="${p.loop ? "true" : "false"}">🔁</button>
+        <input type="range" class="vol" data-action="vol" data-id="${s.id}" min="0" max="1" step="0.05" value="${p.volume}" title="Volume">
+        <span class="time-label" data-id="${s.id}" style="margin-left:auto;font-size:11.5px;color:var(--muted);">${p.audio ? fmtTime(p.audio.currentTime) + " / " + fmtTime(p.audio.duration || 0) : ""}</span>
+      </div>`;
+  }
+
+  function pinnedCardHtml(s) {
+    const info = catInfo(s.categoria);
+    const p = getP(s.id);
+    return `
+      <div class="pinned-card ${p.tocando ? "tocando" : ""}">
+        <div class="p-top">
+          <span class="p-name">${info.emoji} ${escapeHtml(s.nome)}</span>
+          <button class="unpin" data-action="unpin" data-id="${s.id}" title="Tirar dos próximos" aria-label="Tirar dos próximos">✕</button>
+        </div>
+        <div class="p-controls">
+          <button class="play-btn ${p.tocando ? "tocando" : ""}" data-action="play" data-id="${s.id}" aria-label="${p.tocando ? "Pausar" : "Tocar"}">
+            ${p.carregandoAudio ? "…" : (p.tocando ? "❚❚" : "▶")}
+          </button>
+          <button class="icon-btn loop-btn ${p.loop ? "active" : ""}" data-action="loop" data-id="${s.id}" title="${p.loop ? "Repetindo (selecionado)" : "Repetir"}" aria-label="Repetir" aria-pressed="${p.loop ? "true" : "false"}">🔁</button>
+        </div>
+      </div>`;
+  }
+
+  function soundRowHtml(s) {
+    const info = catInfo(s.categoria);
+    const pinned = state.pinned.includes(s.id);
+    const p = getP(s.id);
+    if (state.editandoId === s.id) {
+      const opts = categoriasDisponiveis().map(c => `<option value="${escapeHtml(c)}" ${c === s.categoria ? "selected" : ""}>${escapeHtml(c)}</option>`).join("");
+      return `
+        <div class="sound-row">
+          <div class="row-swatch" style="background:${info.cor}22;">${info.emoji}</div>
+          <div class="row-main">
+            <div class="edit-row">
+              <input type="text" data-edit-nome="${s.id}" value="${escapeHtml(s.nome)}">
+              <select data-edit-cat="${s.id}">${opts}</select>
+              <div class="edit-actions">
+                <button class="btn btn-ghost" data-action="cancelar-edicao">Cancelar</button>
+                <button class="btn btn-accent" data-action="salvar-edicao" data-id="${s.id}">Salvar</button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+    }
+    return `
+      <div class="sound-row ${p.tocando ? "tocando" : ""}">
+        <div class="row-swatch" style="background:${info.cor}22;">${info.emoji}</div>
+        <div class="row-main">
+          <div class="row-name-line">
+            <span class="row-name">${escapeHtml(s.nome)}</span>
+          </div>
+          <div class="row-controls">
+            ${cardControlsHtml(s)}
+          </div>
+        </div>
+        <div class="row-end-actions">
+          <button class="icon-btn pin-btn ${pinned ? "active" : ""}" data-action="pin" data-id="${s.id}" title="${pinned ? "Tirar dos próximos sons" : "Fixar nos próximos sons"}" aria-label="Fixar">${pinned ? "★" : "☆"}</button>
+          <button class="icon-btn" data-action="editar" data-id="${s.id}" title="Renomear / mudar categoria" aria-label="Editar">✎</button>
+          <button class="icon-btn" data-action="remover" data-id="${s.id}" title="Remover som" aria-label="Remover" style="color:var(--danger)">🗑</button>
+        </div>
+      </div>`;
+  }
+
+  function addPanelHtml() {
+    const opts = CATEGORIAS_PADRAO.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+    return `
+      <div class="add-panel ${state.addAberto ? "" : "hidden"}">
+        <h2>Adicionar som</h2>
+        <form id="form-novo-som">
+          <div class="add-grid">
+            <div>
+              <label class="field-label">Nome do som</label>
+              <input type="text" name="nome" placeholder="ex: Corvos ao longe" required>
+            </div>
+            <div>
+              <label class="field-label">Categoria</label>
+              ${state.novaCategoriaModo
+                ? `<input type="text" name="categoriaNova" placeholder="nome da nova categoria" required>`
+                : `<select name="categoria">${opts}</select>`
+              }
+              <button type="button" class="btn btn-ghost" data-action="toggle-nova-categoria" style="margin-top:6px;font-size:11px;">
+                ${state.novaCategoriaModo ? "usar categoria existente" : "+ nova categoria"}
+              </button>
+            </div>
+            <div class="field-full">
+              <label class="field-label">Arquivo de áudio</label>
+              <input type="file" name="arquivo" accept="audio/*" required>
+            </div>
+            <div class="field-full checkbox-row">
+              <input type="checkbox" name="fixar" id="chk-fixar">
+              <label for="chk-fixar">Já deixar fixado em "Próximos sons de fundo"</label>
+            </div>
+          </div>
+          ${state.addErro ? `<p class="add-error">${escapeHtml(state.addErro)}</p>` : ""}
+          <div class="add-actions">
+            <button type="button" class="btn btn-ghost" data-action="cancelar-add">Cancelar</button>
+            <button type="submit" class="btn btn-accent">Salvar som</button>
+          </div>
+        </form>
+      </div>`;
+  }
+
+  function render() {
+    const app = document.getElementById("app");
+    const filtrados = sonsFiltrados();
+    const pinnedSons = state.pinned.map(id => state.sons.find(s => s.id === id)).filter(Boolean);
+    const cats = categoriasDisponiveis();
+
+    app.innerHTML = `
+      <header class="topbar">
+        <h1>🔥 Mesa de Sons</h1>
+        <p class="subtitle">sons de fundo do mestre — toque, empilhe camadas, silencie tudo quando precisar</p>
+        <div class="flourish">🕯️</div>
+      </header>
+
+      <div class="controls-row">
+        <input type="text" id="search" placeholder="Buscar som..." value="${escapeHtml(state.filtroTexto)}">
+        <select id="filter-categoria">
+          <option value="todos" ${state.filtroCategoria === "todos" ? "selected" : ""}>Todas categorias</option>
+          ${cats.map(c => `<option value="${escapeHtml(c)}" ${state.filtroCategoria === c ? "selected" : ""}>${escapeHtml(c)}</option>`).join("")}
+        </select>
+        <button class="btn btn-danger" id="btn-silenciar">⏹ Silenciar tudo</button>
+        <button class="btn btn-accent" id="btn-add-toggle">${state.addAberto ? "Fechar" : "+ Adicionar som"}</button>
+      </div>
+
+      ${addPanelHtml()}
+
+      <section class="shelf">
+        <h2>Próximos sons de fundo</h2>
+        <div class="pinned-row">
+          ${pinnedSons.length === 0
+            ? `<p class="pinned-empty">Nenhum som fixado ainda — toque na estrela ☆ de um som pra deixar ele à mão aqui.</p>`
+            : pinnedSons.map(pinnedCardHtml).join("")}
+        </div>
+      </section>
+
+      <section class="library">
+        <h2>Todos os sons (${filtrados.length})</h2>
+        ${state.carregando
+          ? `<p class="empty-state">Carregando…</p>`
+          : filtrados.length === 0
+          ? `<p class="empty-state">${state.sons.length === 0 ? "Nenhum som cadastrado ainda. Clique em \"+ Adicionar som\" pra começar." : "Nenhum som encontrado com esse filtro."}</p>`
+          : sonsAgrupadosPorCategoria(filtrados).map(grupo => {
+              const info = catInfo(grupo.categoria);
+              return `
+                <div class="category-group">
+                  <h3 class="category-title" style="color:${info.cor}">${info.emoji} ${escapeHtml(grupo.categoria)} <span class="category-count">(${grupo.sons.length})</span></h3>
+                  <div class="sound-list">
+                    ${grupo.sons.map(soundRowHtml).join("")}
+                  </div>
+                </div>`;
+            }).join("")}
+      </section>
+
+      <div class="page-seal">🕯️</div>
+    `;
+
+    attachEvents();
+  }
+
+  function attachEvents() {
+    const app = document.getElementById("app");
+
+    const search = document.getElementById("search");
+    if (search) search.addEventListener("input", e => { state.filtroTexto = e.target.value; renderListOnly(); });
+
+    const filtroCat = document.getElementById("filter-categoria");
+    if (filtroCat) filtroCat.addEventListener("change", e => { state.filtroCategoria = e.target.value; render(); });
+
+    const btnSilenciar = document.getElementById("btn-silenciar");
+    if (btnSilenciar) btnSilenciar.addEventListener("click", silenciarTudo);
+
+    const btnAddToggle = document.getElementById("btn-add-toggle");
+    if (btnAddToggle) btnAddToggle.addEventListener("click", () => { state.addAberto = !state.addAberto; state.addErro = ""; render(); });
+
+    const form = document.getElementById("form-novo-som");
+    if (form) form.addEventListener("submit", e => { e.preventDefault(); submeterNovoSom(form); });
+
+    app.querySelectorAll('[data-action="cancelar-add"]').forEach(b => b.addEventListener("click", () => { state.addAberto = false; state.addErro = ""; render(); }));
+    app.querySelectorAll('[data-action="toggle-nova-categoria"]').forEach(b => b.addEventListener("click", () => { state.novaCategoriaModo = !state.novaCategoriaModo; render(); }));
+
+    app.querySelectorAll('[data-action="play"]').forEach(b => b.addEventListener("click", () => togglePlay(b.dataset.id)));
+    app.querySelectorAll('[data-action="loop"]').forEach(b => b.addEventListener("click", () => toggleLoop(b.dataset.id)));
+    app.querySelectorAll('[data-action="pin"]').forEach(b => b.addEventListener("click", () => togglePin(b.dataset.id)));
+    app.querySelectorAll('[data-action="unpin"]').forEach(b => b.addEventListener("click", () => togglePin(b.dataset.id)));
+    app.querySelectorAll('[data-action="remover"]').forEach(b => b.addEventListener("click", () => removerSom(b.dataset.id)));
+    app.querySelectorAll('[data-action="editar"]').forEach(b => b.addEventListener("click", () => iniciarEdicao(b.dataset.id)));
+    app.querySelectorAll('[data-action="cancelar-edicao"]').forEach(b => b.addEventListener("click", () => { state.editandoId = null; render(); }));
+    app.querySelectorAll('[data-action="salvar-edicao"]').forEach(b => b.addEventListener("click", () => {
+      const id = b.dataset.id;
+      const nomeInput = app.querySelector(`[data-edit-nome="${id}"]`);
+      const catInput = app.querySelector(`[data-edit-cat="${id}"]`);
+      salvarEdicao(id, nomeInput.value, catInput.value);
+    }));
+
+    app.querySelectorAll('[data-action="seek"]').forEach(el => el.addEventListener("input", e => seek(e.target.dataset.id, e.target.value / 100)));
+    app.querySelectorAll('[data-action="vol"]').forEach(el => el.addEventListener("input", e => setVolume(e.target.dataset.id, parseFloat(e.target.value))));
+  }
+
+  // re-render just the library + pinned lists without losing search input focus
+  function renderListOnly() {
+    render();
+    const search = document.getElementById("search");
+    if (search) { search.focus(); const v = search.value; search.value = ""; search.value = v; }
+  }
+
+  // ---------------- boot ----------------
+  async function boot() {
+    if (!window.storage) {
+      document.getElementById("app").innerHTML = `<p class="empty-state">Não foi possível conectar ao Firebase. Verifique sua internet e tente atualizar a página.</p>`;
+      return;
+    }
+    let indexCarregado = false, pinnedCarregado = false;
+    // Enquanto o usuário está com o painel de "adicionar som" aberto ou editando o nome/
+    // categoria de um som, evitamos re-renderizar a tela inteira quando chega uma
+    // atualização remota — do contrário o texto que a pessoa está digitando seria apagado
+    // no meio da digitação. Os dados novos ainda ficam guardados em "state" e aparecem
+    // assim que ela fechar o painel/terminar a edição (essas ações já chamam render()).
+    function podeRenderizarAgora() {
+      return !state.addAberto && state.editandoId === null;
+    }
+    function tentarFinalizarCarregamento() {
+      if (indexCarregado && pinnedCarregado) { state.carregando = false; }
+    }
+    // Escuta em tempo real: qualquer mudança feita neste ou em outro aparelho
+    // (o mestre adicionando/removendo um som, por exemplo) atualiza a tela na hora.
+    window.storage.watch("sons-index", (r) => {
+      state.sons = r && r.value ? JSON.parse(r.value) : [];
+      indexCarregado = true;
+      tentarFinalizarCarregamento();
+      if (podeRenderizarAgora()) render();
+    });
+    window.storage.watch("sons-pinned", (r) => {
+      state.pinned = r && r.value ? JSON.parse(r.value) : [];
+      pinnedCarregado = true;
+      tentarFinalizarCarregamento();
+      if (podeRenderizarAgora()) render();
+    });
+    render(); // mostra "Carregando…" enquanto a primeira leitura em tempo real chega
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
